@@ -14,6 +14,14 @@ int line_count = 0;
 char baseMusicDir[256] = "/home/vito/Music"; // base music directory
 char musicDir[256]; // actual directory for current operation
 
+// Initialize colors
+void initColors() {
+    if (!has_colors()) return;
+    start_color();
+    init_pair(1, COLOR_BLACK, COLOR_CYAN);  // Highlighted menu option
+    init_pair(2, COLOR_WHITE, COLOR_BLACK); // Normal text
+}
+
 // Run a shell command and store output in the buffer
 void runCommand(const char *cmd) {
     FILE *fp = popen(cmd, "r");
@@ -31,16 +39,18 @@ void runCommand(const char *cmd) {
     pclose(fp);
 }
 
-// Show output in a scrollable ncurses window
+// Show output in a scrollable boxed window
 void showOutput() {
     int start = 0;
     int ch;
+
     while (1) {
         clear();
-        mvprintw(0, 0, "Command Output (UP/DOWN to scroll, Q to quit):");
-        int rows = LINES - 2;
+        box(stdscr, 0, 0);
+        mvprintw(0, 2, " Command Output (UP/DOWN to scroll, Q to quit) ");
+        int rows = LINES - 4; // leave space for border
         for (int i = 0; i < rows && (start + i) < line_count; i++) {
-            mvprintw(i + 1, 2, "%s", output[start + i]);
+            mvprintw(i + 2, 2, "%s", output[start + i]);
         }
         refresh();
 
@@ -58,6 +68,7 @@ void ripDirectory() {
     curs_set(1);
 
     clear();
+    box(stdscr, 0, 0);
     mvprintw(2, 5, "Specify subdirectory to rip into (ENTER for none): ");
     move(3, 5);
     getnstr(subDir, 99);
@@ -72,7 +83,7 @@ void ripDirectory() {
     // Create directory if it doesn't exist
     if (mkdir(musicDir, 0755) != 0) {
         if (errno != EEXIST) {
-            mvprintw(LINES/2 + 3, 5, "Error creating directory: %s", strerror(errno));
+            mvprintw(LINES/2, 5, "Error creating directory: %s", strerror(errno));
             getch();
         }
     }
@@ -85,18 +96,19 @@ void ripDirectory() {
 void ripCD() {
     char cmd[512];
     snprintf(cmd, sizeof(cmd),
-             "cdrdao read-cd --read-raw --datafile %s/disc.bin %s/disc.toc",
+             "cdrdao read-cd --read-raw --datafile %s/disc.bin %s/disc.toc && eject",
              musicDir, musicDir);
     runCommand(cmd);
 
     // Make the subdirectory read-only after ripping
-    chmod(musicDir, 0555); // read & execute only
+    chmod(musicDir, 0555);
 }
 
 // Ask for Y/N confirmation before burning
 int confirmBurn() {
     clear();
-    mvprintw(LINES/2, 10, "Are you sure you want to burn the CD? (y/n)");
+    box(stdscr, 0, 0);
+    mvprintw(LINES/2, (COLS - 35)/2, "Are you sure you want to burn the CD? (y/n)");
     refresh();
     int ch;
     while (1) {
@@ -110,56 +122,68 @@ int confirmBurn() {
 void burnCD() {
     char cmd[512];
     snprintf(cmd, sizeof(cmd),
-             "cdrdao write-cd %s/disc.toc",
+             "cdrdao write-cd %s/disc.toc && eject",
              musicDir);
     runCommand(cmd);
 }
 
-// Main menu loop
+// Centered menu loop with border and colors
 void menuLoop() {
     int choice = 0;
     int ch;
+    const char *options[] = {"Rip CD", "Burn CD"};
 
     while (1) {
         clear();
-        mvprintw(2, 5, "Use UP/DOWN to select, ENTER to run, Q to quit.");
-        if (choice == 0) {
-            attron(A_REVERSE); mvprintw(5, 10, "Rip CD"); attroff(A_REVERSE);
-            mvprintw(6, 10, "Burn CD");
-        } else {
-            mvprintw(5, 10, "Rip CD");
-            attron(A_REVERSE); mvprintw(6, 10, "Burn CD"); attroff(A_REVERSE);
+        box(stdscr, 0, 0);
+        mvprintw(1, (COLS - 25)/2, "===== PINGO RIPPER =====");
+        mvprintw(2, (COLS - 40)/2, "Use UP/DOWN arrows to navigate, Q to quit");
+
+        for (int i = 0; i < 2; i++) {
+            if (i == choice) {
+                attron(COLOR_PAIR(1) | A_BOLD);
+                mvprintw(5 + i, (COLS - 10)/2, "%s", options[i]);
+                attroff(COLOR_PAIR(1) | A_BOLD);
+            } else {
+                attron(COLOR_PAIR(2));
+                mvprintw(5 + i, (COLS - 10)/2, "%s", options[i]);
+                attroff(COLOR_PAIR(2));
+            }
         }
+
         refresh();
 
         ch = getch();
         if (ch == KEY_UP || ch == KEY_DOWN) choice = 1 - choice;
         else if (ch == '\n') {
-            line_count = 0; // clear output buffer
+            line_count = 0;
             if (choice == 0) {
                 ripDirectory();
+                clear();
+                box(stdscr, 0, 0);
                 mvprintw(2, 5, "Ripping CD into %s...", musicDir);
                 refresh();
                 ripCD();
             } else {
                 if (confirmBurn()) {
+                    clear();
+                    box(stdscr, 0, 0);
                     mvprintw(2, 5, "Burning CD from %s...", musicDir);
                     refresh();
                     burnCD();
                 } else {
+                    clear();
+                    box(stdscr, 0, 0);
                     mvprintw(2, 5, "Burn cancelled.");
                     refresh();
                 }
             }
 
-            showOutput(); // show scrollable output
-
+            showOutput();
             mvprintw(LINES-2, 5, "Press any key to return to the menu...");
-            getch(); // wait for user to continue
+            getch();
         }
-        else if (ch == 'q' || ch == 'Q') {
-            break;
-        }
+        else if (ch == 'q' || ch == 'Q') break;
     }
 }
 
@@ -170,7 +194,9 @@ int main() {
     keypad(stdscr, TRUE);
     curs_set(0);
 
-    menuLoop(); // start menu loop
+    initColors(); // Initialize color pairs
+
+    menuLoop(); // start menu
 
     endwin();
     return 0;
