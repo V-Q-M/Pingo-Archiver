@@ -64,52 +64,35 @@ void runCommand(const char *cmd) {
 void showOutput() {
     int start = 0;
     int ch;
-
-    int win_h = LINES - 4;
-    int win_w = COLS - 6;
-    int win_y = 2;
-    int win_x = 3;
-
-    WINDOW *win = newwin(win_h, win_w, win_y, win_x);
-    keypad(win, TRUE);
+    int rows = LINES - 4;
 
     while (1) {
-        werase(win);
-        box(win, 0, 0);
+        clear();
+        box(stdscr, 0, 0);
 
-        wattron(win, A_BOLD);
-        mvwprintw(win, 1, 2, "Command Output");
-        wattroff(win, A_BOLD);
+        attron(A_BOLD);
+        mvprintw(0, 2, " Command Output (UP/DOWN to scroll, Q to quit) ");
+        attroff(A_BOLD);
 
-        mvwhline(win, 2, 1, ACS_HLINE, win_w - 2);
-        mvwprintw(win, win_h - 2, 2, "J-K  Scroll   Q Quit");
-
-        int rows = win_h - 5;
         for (int i = 0; i < rows && (start + i) < line_count; i++) {
-            mvwprintw(win, 3 + i, 2, "%s", output[start + i]);
+            mvprintw(2 + i, 2, "%s", output[start + i]);
         }
 
-        wrefresh(win);
-        ch = wgetch(win);
+        refresh();
 
-        switch (ch) {
-            case KEY_UP:
-            case 'k':
-                if (start > 0) start--;
-                break;
-
-            case KEY_DOWN:
-            case 'j':
-                if (start + rows < line_count) start++;
-                break;
-
-            case 'q':
-            case 'Q':
-                delwin(win);
-                return;
+        ch = getch();
+        if (ch == KEY_UP || ch == 'k') {
+            if (start > 0) start--;
+        } else if (ch == KEY_DOWN || ch == 'j') {
+            if (start + rows < line_count) start++;
+        } else if (ch == 'q' || ch == 'Q') {
+            clear();
+            refresh();
+            return;
         }
     }
 }
+
 
 void promptDirectory(const char *title, const char *prompt) {
     int win_h = 9;
@@ -140,6 +123,41 @@ void promptDirectory(const char *title, const char *prompt) {
 }
 
 
+int mkdir_recursive(const char *path, mode_t mode) {
+    char tmp[512];
+    char *p;
+    size_t len;
+
+    if (!path || !*path) return -1;
+
+    strncpy(tmp, path, sizeof(tmp)-1);
+    tmp[sizeof(tmp)-1] = '\0';
+    len = strlen(tmp);
+
+    // Remove trailing slash
+    if (tmp[len-1] == '/') tmp[len-1] = 0;
+
+    // Iterate through path components
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0;
+            if (mkdir(tmp, mode) != 0) {
+                if (errno != EEXIST) return -1;
+            }
+            *p = '/';
+        }
+    }
+
+    // Create the final directory
+    if (mkdir(tmp, mode) != 0) {
+        if (errno != EEXIST) return -1;
+    }
+
+    return 0;
+}
+
+
+
 // Ask the user for a subdirectory to rip into, create it
 void ripDirectory() {
     promptDirectory(
@@ -147,25 +165,30 @@ void ripDirectory() {
         "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 
+    char finalPath[256];
+
     if (strlen(musicDir) > 0) {
-        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, musicDir);
+        // User entered something → concatenate
+        snprintf(finalPath, sizeof(finalPath), "%s/%s", baseMusicDir, musicDir);
     } else {
-        strncpy(musicDir, baseMusicDir, sizeof(musicDir));
-        musicDir[sizeof(musicDir) - 1] = '\0';
+        // User pressed ENTER → use base directory
+        strncpy(finalPath, baseMusicDir, sizeof(finalPath)-1);
+        finalPath[sizeof(finalPath)-1] = '\0';
     }
 
-    if (mkdir(musicDir, 0755) != 0 && errno != EEXIST) {
-        char msg[256];
-        snprintf(msg, sizeof(msg),
-                 "Error creating directory: %s",
-                 strerror(errno));
+    // Copy back to musicDir safely
+    strncpy(musicDir, finalPath, sizeof(musicDir)-1);
+    musicDir[sizeof(musicDir)-1] = '\0';
 
-        showStatus(msg);
-        getch();
-    }
+    // Create directory if it doesn't exist
+    if (mkdir_recursive(musicDir, 0755) != 0) {
+    char msg[256];
+    snprintf(msg, sizeof(msg), "Error creating directory: %s", strerror(errno));
+    showStatus(msg);
+    getch();
 }
 
-
+}
 
 
 // Run the CD ripping command
@@ -338,7 +361,7 @@ void menuLoop() {
                     }
                 }
 
-                showOutput();
+                //showOutput();
                 showStatus("Press any key to return to the menu...");
                 getch();
 
