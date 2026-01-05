@@ -70,7 +70,7 @@ void ripDirectory() {
     clear();
     box(stdscr, 0, 0);
     mvprintw(2, 5, "Specify subdirectory to rip into (ENTER for none): ");
-    move(3, 5);
+    //move(3, 5);
     getnstr(subDir, 99);
 
     if (strlen(subDir) > 0) {
@@ -108,7 +108,7 @@ void ripCD() {
 int confirmBurn() {
     clear();
     box(stdscr, 0, 0);
-    mvprintw(LINES/2, (COLS - 35)/2, "Are you sure you want to burn the CD? (y/n)");
+    mvprintw(2,5, "Are you sure you want to burn the CD? (y/n)");
     refresh();
     int ch;
     while (1) {
@@ -116,6 +116,40 @@ int confirmBurn() {
         if (ch == 'y' || ch == 'Y') return 1;
         else if (ch == 'n' || ch == 'N') return 0;
     }
+}
+
+// Ask the user for a subdirectory to burn from
+int burnDirectory() {
+    char subDir[100] = "";
+    echo();
+    curs_set(1);
+
+    clear();
+    box(stdscr, 0, 0);
+    mvprintw(2, 5, "Specify subdirectory to burn from: ");
+    //move(3, 5);
+    getnstr(subDir, 99);
+
+    if (strlen(subDir) > 0) {
+        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, subDir);
+    } else {
+        strncpy(musicDir, baseMusicDir, sizeof(musicDir) - 1);
+        musicDir[sizeof(musicDir) - 1] = '\0';
+    }
+
+    // Check if directory exists
+    if (mkdir(musicDir, 0755) != 0) {
+        if (errno != EEXIST) {
+            mvprintw(LINES/2, 5, "Error finding directory: %s", strerror(errno));
+            noecho();
+            curs_set(0);
+            return 1;
+        }
+    }
+
+    noecho();
+    curs_set(0);
+    return 0;
 }
 
 // Run the CD burning command
@@ -166,11 +200,18 @@ void menuLoop() {
                 ripCD();
             } else {
                 if (confirmBurn()) {
-                    clear();
-                    box(stdscr, 0, 0);
-                    mvprintw(2, 5, "Burning CD from %s...", musicDir);
-                    refresh();
-                    burnCD();
+                    if (burnDirectory() == 0){
+                        clear();
+                        box(stdscr, 0, 0);
+                        mvprintw(2, 5, "Burning CD from %s...", musicDir);
+                        refresh();
+                        burnCD();
+                    } else {
+                        clear();
+                        box(stdscr, 0, 0);
+                        mvprintw(2, 5, "Error burning CD...");
+                        refresh();
+                    }
                 } else {
                     clear();
                     box(stdscr, 0, 0);
