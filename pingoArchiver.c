@@ -144,7 +144,7 @@ void promptDirectory(const char *title, const char *prompt) {
 void ripDirectory() {
     promptDirectory(
         "Rip CD",
-        "Subdirectory to rip into (e.g. The_Beatles:Disc01):"
+        "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 
     if (strlen(musicDir) > 0) {
@@ -199,7 +199,7 @@ int confirmBurn() {
         wattroff(win, A_BOLD);
 
         mvwhline(win, 2, 1, ACS_HLINE, win_w - 2);
-        mvwprintw(win, 3, 2, "Are you sure you want to burn the CD?");
+        mvwprintw(win, 3, 2, "Are you sure you want to burn a CD?");
         mvwprintw(win, 5, 2, "Y = Yes    N = No");
 
         wrefresh(win);
@@ -221,7 +221,7 @@ int confirmBurn() {
 int burnDirectory() {
     promptDirectory(
         "Burn CD",
-        "Subdirectory to burn from:"
+        "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 
     if (strlen(musicDir) > 0) {
