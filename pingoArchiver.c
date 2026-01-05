@@ -22,11 +22,33 @@ void initColors() {
     init_pair(2, COLOR_WHITE, COLOR_BLACK); // Normal text
 }
 
+void showStatus(const char *msg) {
+    int win_h = 5;
+    int win_w = COLS - 10;
+    int win_y = (LINES - win_h) / 2;
+    int win_x = 5;
+
+    WINDOW *win = newwin(win_h, win_w, win_y, win_x);
+    box(win, 0, 0);
+
+    wattron(win, A_BOLD);
+//    mvwprintw(win, 2, 2, "%s", msg);
+    mvwprintw(win, 2, (win_w - strlen(msg)) / 2, "%s", msg);
+
+    wattroff(win, A_BOLD);
+
+    wrefresh(win);
+    delwin(win);
+}
+
+
 // Run a shell command and store output in the buffer
 void runCommand(const char *cmd) {
     FILE *fp = popen(cmd, "r");
     if (!fp) {
-        snprintf(output[line_count++], 256, "Failed to run command.\n");
+        if (line_count < MAX_LINES) {
+            snprintf(output[line_count++], 256, "Failed to run command.");
+        }
         return;
     }
 
@@ -39,58 +61,107 @@ void runCommand(const char *cmd) {
     pclose(fp);
 }
 
-// Show output in a scrollable boxed window
 void showOutput() {
     int start = 0;
     int ch;
 
-    while (1) {
-        clear();
-        box(stdscr, 0, 0);
-        mvprintw(0, 2, " Command Output (UP/DOWN to scroll, Q to quit) ");
-        int rows = LINES - 4; // leave space for border
-        for (int i = 0; i < rows && (start + i) < line_count; i++) {
-            mvprintw(i + 2, 2, "%s", output[start + i]);
-        }
-        refresh();
+    int win_h = LINES - 4;
+    int win_w = COLS - 6;
+    int win_y = 2;
+    int win_x = 3;
 
-        ch = getch();
-        if (ch == KEY_UP && start > 0) start--;
-        else if (ch == KEY_DOWN && start + rows < line_count) start++;
-        else if (ch == 'q' || ch == 'Q') break;
+    WINDOW *win = newwin(win_h, win_w, win_y, win_x);
+    keypad(win, TRUE);
+
+    while (1) {
+        werase(win);
+        box(win, 0, 0);
+
+        wattron(win, A_BOLD);
+        mvwprintw(win, 1, 2, "Command Output");
+        wattroff(win, A_BOLD);
+
+        mvwhline(win, 2, 1, ACS_HLINE, win_w - 2);
+        mvwprintw(win, win_h - 2, 2, "J-K  Scroll   Q Quit");
+
+        int rows = win_h - 5;
+        for (int i = 0; i < rows && (start + i) < line_count; i++) {
+            mvwprintw(win, 3 + i, 2, "%s", output[start + i]);
+        }
+
+        wrefresh(win);
+        ch = wgetch(win);
+
+        switch (ch) {
+            case KEY_UP:
+            case 'k':
+                if (start > 0) start--;
+                break;
+
+            case KEY_DOWN:
+            case 'j':
+                if (start + rows < line_count) start++;
+                break;
+
+            case 'q':
+            case 'Q':
+                delwin(win);
+                return;
+        }
     }
 }
+
+void promptDirectory(const char *title, const char *prompt) {
+    int win_h = 9;
+    int win_w = 60;
+    int win_y = (LINES - win_h) / 2;
+    int win_x = (COLS - win_w) / 2;
+
+    WINDOW *win = newwin(win_h, win_w, win_y, win_x);
+    box(win, 0, 0);
+
+    echo();
+    curs_set(1);
+
+    wattron(win, A_BOLD);
+    mvwprintw(win, 1, (win_w - strlen(title)) / 2, "%s", title);
+    wattroff(win, A_BOLD);
+
+    mvwhline(win, 2, 1, ACS_HLINE, win_w - 2);
+    mvwprintw(win, 3, 2, "%s", prompt);
+    mvwprintw(win, 5, 2, "> ");
+
+    wrefresh(win);
+    wgetnstr(win, musicDir, 255);
+
+    noecho();
+    curs_set(0);
+    delwin(win);
+}
+
 
 // Ask the user for a subdirectory to rip into, create it
 void ripDirectory() {
     char subDir[100] = "";
-    echo();
-    curs_set(1);
 
-    clear();
-    box(stdscr, 0, 0);
-    mvprintw(2, 5, "Specify subdirectory to rip into (ENTER for none): ");
-    //move(3, 5);
-    getnstr(subDir, 99);
+    promptDirectory(
+        "Rip CD",
+        "Subdirectory to rip into (e.g. The_Beatles:Disc01):"
+    );
 
-    if (strlen(subDir) > 0) {
-        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, subDir);
+    if (strlen(musicDir) > 0) {
+        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, musicDir);
     } else {
-        strncpy(musicDir, baseMusicDir, sizeof(musicDir) - 1);
-        musicDir[sizeof(musicDir) - 1] = '\0';
+        strncpy(musicDir, baseMusicDir, sizeof(musicDir));
     }
 
-    // Create directory if it doesn't exist
-    if (mkdir(musicDir, 0755) != 0) {
-        if (errno != EEXIST) {
-            mvprintw(LINES/2, 5, "Error creating directory: %s", strerror(errno));
-            getch();
-        }
+    if (mkdir(musicDir, 0755) != 0 && errno != EEXIST) {
+        mvprintw(LINES / 2, 5, "Error creating directory: %s", strerror(errno));
+        getch();
     }
-
-    noecho();
-    curs_set(0);
 }
+
+
 
 // Run the CD ripping command
 void ripCD() {
@@ -106,51 +177,64 @@ void ripCD() {
 
 // Ask for Y/N confirmation before burning
 int confirmBurn() {
-    clear();
-    box(stdscr, 0, 0);
-    mvprintw(2,5, "Are you sure you want to burn the CD? (y/n)");
-    refresh();
-    int ch;
+    int win_h = 7;
+    int win_w = 44;
+    int win_y = (LINES - win_h) / 2;
+    int win_x = (COLS - win_w) / 2;
+
+    WINDOW *win = newwin(win_h, win_w, win_y, win_x);
+    keypad(win, TRUE);
+
     while (1) {
-        ch = getch();
-        if (ch == 'y' || ch == 'Y') return 1;
-        else if (ch == 'n' || ch == 'N') return 0;
+        werase(win);
+        box(win, 0, 0);
+
+        wattron(win, A_BOLD);
+        mvwprintw(win, 1, (win_w - 20) / 2, "Confirm Burn");
+        wattroff(win, A_BOLD);
+
+        mvwhline(win, 2, 1, ACS_HLINE, win_w - 2);
+        mvwprintw(win, 3, 2, "Are you sure you want to burn the CD?");
+        mvwprintw(win, 5, 2, "Y = Yes    N = No");
+
+        wrefresh(win);
+
+        int ch = wgetch(win);
+        if (ch == 'y' || ch == 'Y') {
+            delwin(win);
+            return 1;
+        }
+        if (ch == 'n' || ch == 'N') {
+            delwin(win);
+            return 0;
+        }
     }
 }
+
 
 // Ask the user for a subdirectory to burn from
 int burnDirectory() {
-    char subDir[100] = "";
-    echo();
-    curs_set(1);
+    promptDirectory(
+        "Burn CD",
+        "Subdirectory to burn from:"
+    );
 
-    clear();
-    box(stdscr, 0, 0);
-    mvprintw(2, 5, "Specify subdirectory to burn from: ");
-    //move(3, 5);
-    getnstr(subDir, 99);
-
-    if (strlen(subDir) > 0) {
-        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, subDir);
+    if (strlen(musicDir) > 0) {
+        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, musicDir);
     } else {
-        strncpy(musicDir, baseMusicDir, sizeof(musicDir) - 1);
-        musicDir[sizeof(musicDir) - 1] = '\0';
+        strncpy(musicDir, baseMusicDir, sizeof(musicDir));
     }
 
-    // Check if directory exists
-    if (mkdir(musicDir, 0755) != 0) {
-        if (errno != EEXIST) {
-            mvprintw(LINES/2, 5, "Error finding directory: %s", strerror(errno));
-            noecho();
-            curs_set(0);
-            return 1;
-        }
+    struct stat st;
+    if (stat(musicDir, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        showStatus("Directory does not exist.");
+        getch();
+        return 1;
     }
 
-    noecho();
-    curs_set(0);
     return 0;
 }
+
 
 // Run the CD burning command
 void burnCD() {
@@ -161,70 +245,105 @@ void burnCD() {
     runCommand(cmd);
 }
 
-// Centered menu loop with border and colors
+
 void menuLoop() {
     int choice = 0;
     int ch;
-    const char *options[] = {"Rip CD", "Burn CD"};
+
+    const char *options[] = { "Rip CD", "Burn CD" };
+    const int optionCount = 2;
+
+    int win_h = 13;
+    int win_w = 42;
+    int win_y = (LINES - win_h) / 2;
+    int win_x = (COLS - win_w) / 2;
+
+    WINDOW *menu = newwin(win_h, win_w, win_y, win_x);
+    keypad(menu, TRUE);
 
     while (1) {
-        clear();
-        box(stdscr, 0, 0);
-        mvprintw(1, (COLS - 25)/2, "===== PINGO RIPPER =====");
-        mvprintw(2, (COLS - 40)/2, "Use UP/DOWN arrows to navigate, Q to quit");
+        werase(menu);
+        box(menu, 0, 0);
 
-        for (int i = 0; i < 2; i++) {
+        /* Title */
+        wattron(menu, A_BOLD);
+        mvwprintw(menu, 1, (win_w - 15) / 2, "PINGO ARCHIVER");
+        wattroff(menu, A_BOLD);
+
+        /* Separator */
+        mvwhline(menu, 2, 1, ACS_HLINE, win_w - 2);
+
+        /* Help text */
+        mvwprintw(menu, 3, 2, "J-K Navigate   ENTER Select   Q Quit");
+
+        /* Menu options */
+        for (int i = 0; i < optionCount; i++) {
+            int y = 6 + i;
+
             if (i == choice) {
-                attron(COLOR_PAIR(1) | A_BOLD);
-                mvprintw(5 + i, (COLS - 10)/2, "%s", options[i]);
-                attroff(COLOR_PAIR(1) | A_BOLD);
+                wattron(menu, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
+                mvwprintw(menu, y, 4, "%-*s", win_w - 8, options[i]);
+                wattroff(menu, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
             } else {
-                attron(COLOR_PAIR(2));
-                mvprintw(5 + i, (COLS - 10)/2, "%s", options[i]);
-                attroff(COLOR_PAIR(2));
+                wattron(menu, COLOR_PAIR(2));
+                mvwprintw(menu, y, 4, "%-*s", win_w - 8, options[i]);
+                wattroff(menu, COLOR_PAIR(2));
             }
         }
 
-        refresh();
+        wrefresh(menu);
+        ch = wgetch(menu);
 
-        ch = getch();
-        if (ch == KEY_UP || ch == KEY_DOWN) choice = 1 - choice;
-        else if (ch == '\n') {
-            line_count = 0;
-            if (choice == 0) {
-                ripDirectory();
+        switch (ch) {
+            case KEY_UP:
+            case 'k':
+                choice = (choice - 1 + optionCount) % optionCount;
+                break;
+
+            case KEY_DOWN:
+            case 'j':
+                choice = (choice + 1) % optionCount;
+                break;
+
+            case '\n':
+                delwin(menu);
                 clear();
                 box(stdscr, 0, 0);
-                mvprintw(2, 5, "Ripping CD into %s...", musicDir);
-                refresh();
-                ripCD();
-            } else {
-                if (confirmBurn()) {
-                    if (burnDirectory() == 0){
-                        clear();
-                        box(stdscr, 0, 0);
-                        mvprintw(2, 5, "Burning CD from %s...", musicDir);
-                        refresh();
-                        burnCD();
-                    } else {
-                        clear();
-                        box(stdscr, 0, 0);
-                        mvprintw(2, 5, "Error burning CD...");
-                        refresh();
-                    }
-                } else {
-                    clear();
-                    box(stdscr, 0, 0);
-                    mvprintw(2, 5, "Burn cancelled.");
-                    refresh();
-                }
-            }
 
-            showOutput();
-            mvprintw(LINES-2, 5, "Press any key to return to the menu...");
-            getch();
+                line_count = 0;
+
+                if (choice == 0) {
+                    ripDirectory();
+                    showStatus("Ripping CD...");
+                    refresh();
+                    ripCD();
+                } else {
+                    if (confirmBurn()) {
+                        if (burnDirectory() == 0) {
+                            mvprintw(2, 5, "Burning CD from %s...", musicDir);
+                            refresh();
+                            burnCD();
+                        } else {
+                            mvprintw(2, 5, "Error burning CD...");
+                        }
+                    } else {
+                        mvprintw(2, 5, "Burn cancelled.");
+                    }
+                }
+
+                showOutput();
+                mvprintw(LINES - 2, 5, "Press any key to return to the menu...");
+                getch();
+
+                menu = newwin(win_h, win_w, win_y, win_x);
+                keypad(menu, TRUE);
+                break;
+
+            case 'q':
+            case 'Q':
+                delwin(menu);
+                return;
         }
-        else if (ch == 'q' || ch == 'Q') break;
     }
 }
 
