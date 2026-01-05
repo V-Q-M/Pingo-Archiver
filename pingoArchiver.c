@@ -142,8 +142,6 @@ void promptDirectory(const char *title, const char *prompt) {
 
 // Ask the user for a subdirectory to rip into, create it
 void ripDirectory() {
-    char subDir[100] = "";
-
     promptDirectory(
         "Rip CD",
         "Subdirectory to rip into (e.g. The_Beatles:Disc01):"
@@ -153,13 +151,20 @@ void ripDirectory() {
         snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, musicDir);
     } else {
         strncpy(musicDir, baseMusicDir, sizeof(musicDir));
+        musicDir[sizeof(musicDir) - 1] = '\0';
     }
 
     if (mkdir(musicDir, 0755) != 0 && errno != EEXIST) {
-        mvprintw(LINES / 2, 5, "Error creating directory: %s", strerror(errno));
+        char msg[256];
+        snprintf(msg, sizeof(msg),
+                 "Error creating directory: %s",
+                 strerror(errno));
+
+        showStatus(msg);
         getch();
     }
 }
+
 
 
 
@@ -320,11 +325,13 @@ void menuLoop() {
                 } else {
                     if (confirmBurn()) {
                         if (burnDirectory() == 0) {
-                            mvprintw(2, 5, "Burning CD from %s...", musicDir);
+                            //mvprintw(2, 5, "Burning CD from %s...", musicDir);
+                            showStatus("Burning CD...");
                             refresh();
                             burnCD();
                         } else {
-                            mvprintw(2, 5, "Error burning CD...");
+                            //mvprintw(2, 5, "Error burning CD...");
+                            showStatus("Error burning CD");
                         }
                     } else {
                         mvprintw(2, 5, "Burn cancelled.");
@@ -332,8 +339,11 @@ void menuLoop() {
                 }
 
                 showOutput();
-                mvprintw(LINES - 2, 5, "Press any key to return to the menu...");
+                showStatus("Press any key to return to the menu...");
                 getch();
+
+                clear();
+                refresh();
 
                 menu = newwin(win_h, win_w, win_y, win_x);
                 keypad(menu, TRUE);
