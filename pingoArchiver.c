@@ -242,17 +242,33 @@ int confirmBurn() {
 
 // Ask the user for a subdirectory to burn from
 int burnDirectory() {
+    // Prompt user into a temporary buffer
+    char userInput[256] = "";
     promptDirectory(
         "Burn CD",
         "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 
-    if (strlen(musicDir) > 0) {
-        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, musicDir);
-    } else {
-        strncpy(musicDir, baseMusicDir, sizeof(musicDir));
+    // Copy & clean input from musicDir (where promptDirectory wrote)
+    strncpy(userInput, musicDir, sizeof(userInput)-1);
+    userInput[sizeof(userInput)-1] = '\0';
+
+    // Trim trailing spaces and newlines
+    size_t len = strlen(userInput);
+    while (len > 0 && (userInput[len-1] == '\n' || userInput[len-1] == ' ')) {
+        userInput[len-1] = '\0';
+        len--;
     }
 
+    // Build the final full path
+    if (len > 0) {
+        snprintf(musicDir, sizeof(musicDir), "%s/%s", baseMusicDir, userInput);
+    } else {
+        strncpy(musicDir, baseMusicDir, sizeof(musicDir)-1);
+        musicDir[sizeof(musicDir)-1] = '\0';
+    }
+
+    // Check if directory exists
     struct stat st;
     if (stat(musicDir, &st) != 0 || !S_ISDIR(st.st_mode)) {
         showStatus("Directory does not exist.");
@@ -268,7 +284,7 @@ int burnDirectory() {
 void burnCD() {
     char cmd[512];
     snprintf(cmd, sizeof(cmd),
-             "cdrdao write-cd %s/disc.toc && eject",
+             "cdrdao write %s/disc.toc && eject",
              musicDir);
     runCommand(cmd);
 }
