@@ -1,6 +1,7 @@
 #include "ui.h"
 #include <ncurses.h>
 #include <string.h>
+#include <ctype.h>
 
 
 // Initialize colors
@@ -62,6 +63,43 @@ void showOutput() {
     }
 }
 
+
+void inputLoop(WINDOW* win, int win_w){
+    char input[256] = "";
+    int pos = 0;
+    int ch;
+
+    while(1){
+        ch= wgetch(win);
+
+        if (ch=='\n') {
+            break;
+        } else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
+            if (pos > 0) {
+                pos--;
+                input[pos] = '\0';
+            }
+        } else if (isprint(ch) && pos < sizeof(input)-1){
+            if (ch == ' '){
+                ch = '_'; // Replace space with underscore
+            }
+            input[pos++] = ch;
+            input[pos] = '\0'; // Adjust for null terminator
+        }
+
+        // redraw inputline
+        mvwprintw(win, 5, 2, "> %-*s", win_w-4, input); 
+
+        if (pos >= 3){
+
+        }
+
+        wrefresh(win);
+    }
+    strncpy(musicDir, input, sizeof(musicDir)-1);
+    musicDir[sizeof(musicDir)-1] = '\0';
+}
+
 void promptDirectory(const char *title, const char *prompt) {
     int win_h = 9;
     int win_w = 60;
@@ -71,8 +109,8 @@ void promptDirectory(const char *title, const char *prompt) {
     WINDOW *win = newwin(win_h, win_w, win_y, win_x);
     box(win, 0, 0);
 
-    echo();
-    curs_set(1);
+    //echo();
+    //curs_set(1);
 
     wattron(win, A_BOLD);
     mvwprintw(win, 1, (win_w - strlen(title)) / 2, "%s", title);
@@ -83,10 +121,16 @@ void promptDirectory(const char *title, const char *prompt) {
     mvwprintw(win, 5, 2, "> ");
 
     wrefresh(win);
-    wgetnstr(win, musicDir, 255);
+    // detect keypresses and "type" them like echo
+    // after typing 3 letters get recommendations from the baseMusicDir
+    // display 4 or 5 of these recommendations below
 
-    noecho();
-    curs_set(0);
+
+//    wgetnstr(win, musicDir, 255);
+    inputLoop(win, win_w);
+
+    //noecho();
+    //curs_set(0);
     delwin(win);
 }
 
