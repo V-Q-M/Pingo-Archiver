@@ -2,6 +2,8 @@
 #include <ncurses.h>
 #include <string.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <stdio.h>
 
 
 // Initialize colors
@@ -63,36 +65,120 @@ void showOutput() {
     }
 }
 
+#define MAX_SUGGESTIONS 5
+
+// Get up to MAX_SUGGESTIONS entries in baseDir starting with prefix
+int getDirSuggestions(const char *baseDir, const char *prefix, char suggestions[MAX_SUGGESTIONS][256]) {
+    DIR *dir = opendir(baseDir);
+    if (!dir) return 0;
+
+    struct dirent *entry;
+    int count = 0;
+    size_t preLen = strlen(prefix);
+
+    while ((entry = readdir(dir)) != NULL && count < MAX_SUGGESTIONS) {
+        // Skip "." and ".."
+        if (entry->d_name[0] == '.' &&
+            (entry->d_name[1] == '\0' ||
+             (entry->d_name[1] == '.' && entry->d_name[2] == '\0')))
+            continue;
+
+        // Match prefix
+        if (strncmp(entry->d_name, prefix, preLen) == 0) {
+            strncpy(suggestions[count], entry->d_name, 255);
+            suggestions[count][255] = '\0';
+            count++;
+        }
+    }
+
+    closedir(dir);
+    return count;
+}
 
 void inputLoop(WINDOW* win, int win_w){
     char input[256] = "";
+    char displayedInput[256] = "";
     int pos = 0;
     int ch;
+
+    char suggestions[MAX_SUGGESTIONS][256];
+    int sugCount=0;
+
+    int currentSuggestion = 0;
+    int suggestionMode = 0;
+
 
     while(1){
         ch= wgetch(win);
 
         if (ch=='\n') {
-            break;
+            if (suggestionMode == 1){
+                suggestionMode = 0;
+                strncpy(input, displayedInput, sizeof(input)-1);
+                pos = strlen(displayedInput);
+            } else {
+                break;
+            }
         } else if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
+            if (suggestionMode == 1){
+                suggestionMode = 0;
+                strncpy(input, displayedInput, sizeof(input)-1);
+                pos = strlen(displayedInput);
+            }
             if (pos > 0) {
                 pos--;
                 input[pos] = '\0';
             }
-        } else if (isprint(ch) && pos < sizeof(input)-1){
-            if (ch == ' '){
-                ch = '_'; // Replace space with underscore
+            // redraw inputline
+            mvwprintw(win, 5, 2, "> %-*s", win_w-4, input); 
+        } else if (ch == '\t' || ch == KEY_BTAB) {
+            if (sugCount > 0) {
+                if (suggestionMode == 0) {
+                    // First Tab press 
+                    currentSuggestion = (ch == KEY_BTAB) ? sugCount - 1 : 0;
+                } else {
+                    // Move forward or backward through suggestions
+                    if (ch == KEY_BTAB) {
+                        currentSuggestion = (currentSuggestion - 1 + sugCount) % sugCount;
+                    } else {
+                        currentSuggestion = (currentSuggestion + 1) % sugCount;
+                    }
+                }
+
+                suggestionMode = 1; // Activate suggestion mode
+
+                // Display the suggestion but don't use it yet
+                strncpy(displayedInput, suggestions[currentSuggestion], sizeof(displayedInput) - 1);
+                displayedInput[sizeof(displayedInput) - 1] = '\0';
+
+                // redraw input line
+                mvwprintw(win, 5, 2, "> %-*s", win_w - 4, displayedInput);
             }
+        } else if (isprint(ch) && pos < sizeof(input)-1){
+            if (suggestionMode == 1){
+                suggestionMode = 0;
+                strncpy(input, displayedInput, sizeof(input)-1);
+                pos = strlen(displayedInput);
+            }
+            if (ch == ' ') ch = '_'; // Replace space with underscore
             input[pos++] = ch;
             input[pos] = '\0'; // Adjust for null terminator
+
+            // redraw inputline
+            mvwprintw(win, 5, 2, "> %-*s", win_w-4, input); 
         }
 
-        // redraw inputline
-        mvwprintw(win, 5, 2, "> %-*s", win_w-4, input); 
-
-        if (pos >= 3){
-
-        }
+        // show suggestions if input >= 3
+        if (pos > 0) {
+            sugCount = getDirSuggestions(baseMusicDir, input, suggestions);
+            for (int i = 0; i < MAX_SUGGESTIONS; i++) {
+                mvwprintw(win, 6 + i, 4, "%-50s", i < sugCount ? suggestions[i] : "");
+            }
+        } else {
+            // clear suggestion lines
+            for (int i = 0; i < MAX_SUGGESTIONS; i++)
+                mvwprintw(win, 6 + i, 4, "%-50s", "");
+        } 
 
         wrefresh(win);
     }
@@ -108,6 +194,7 @@ void promptDirectory(const char *title, const char *prompt) {
 
     WINDOW *win = newwin(win_h, win_w, win_y, win_x);
     box(win, 0, 0);
+    keypad(win, TRUE);
 
     //echo();
     //curs_set(1);

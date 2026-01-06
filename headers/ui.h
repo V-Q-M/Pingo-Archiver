@@ -11,6 +11,7 @@ int confirmBurn();
 
 extern char musicDir[256];
 extern char output[MAX_LINES][256];
+extern char baseMusicDir[256]; 
 extern int line_count;
 
 #endif
