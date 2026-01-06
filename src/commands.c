@@ -30,11 +30,9 @@ void runCommand(const char *cmd) {
 
 // Ask the user for a subdirectory to rip into, create it
 int backupDirectory(const char *optionName, const char *optionDescription) {
-    promptDirectory(
-        optionName,
-        optionDescription, 
-        "Enter album folder name: "
-    );
+    if (promptDirectory(optionName, optionDescription, "Enter album folder name: ") != 0) {
+        return 2; // User pressed ESC and wants to cancel
+    };
 
     char finalPath[256];
 
@@ -56,7 +54,7 @@ int backupDirectory(const char *optionName, const char *optionDescription) {
         char msg[256];
         snprintf(msg, sizeof(msg), "Error creating directory: %s", strerror(errno));
         showStatus(msg,2);
-        return 1;
+        return 2;
     }
 
     return 0;
@@ -65,14 +63,13 @@ int backupDirectory(const char *optionName, const char *optionDescription) {
 
 // Ask the user for a subdirectory to burn from
 int restoreDirectory(const char *optionName, const char *optionDescription) {
+   if (promptDirectory(optionName, optionDescription, "Enter album folder name: ") != 0) {
+        return 2; // User pressed ESC and wants to cancel
+    };
     // Prompt user into a temporary buffer
     char userInput[256] = "";
-    promptDirectory(
-        optionName,
-        optionDescription,
-        "Enter album folder name: "
-    );
 
+ 
     // Copy & clean input from musicDir (where promptDirectory wrote)
     strncpy(userInput, musicDir, sizeof(userInput)-1);
     userInput[sizeof(userInput)-1] = '\0';

@@ -20,12 +20,15 @@ void backupMenuOption(){
 
 void restoreMenuOption(){
     if (confirmBurn()) {
-        if (restoreDirectory("Restore CD", "Uses a saved backup to recreate the cd") == 0) {
+        int returnCode = restoreDirectory("Restore CD", "Uses a saved backup to recreate the cd");
+        if (returnCode == 0) {
             showStatus("Burning CD...", 1);
             refresh();
             restoreCD();
-        } else {
+        } else if (returnCode == 1) {
             showStatus("Error burning CD!",1);
+        } else {
+            showStatus("Burn cancelled.",1);
         }
     } else {
         showStatus("Burn cancelled.",1);
@@ -33,7 +36,8 @@ void restoreMenuOption(){
 }
 
 void extractMenuOption(){
-    if (backupDirectory("Extract CD", "Extracts content in a widely used format like .wav") == 0){
+    int returnCode = (backupDirectory("Extract CD", "Extracts content in a widely used format like .wav"));
+    if (returnCode == 0){
         showStatus("Reading CD...",1);
         refresh();
         extractCD();
@@ -42,12 +46,15 @@ void extractMenuOption(){
 
 void burnMenuOption(){
     if (confirmBurn()) {
-        if (restoreDirectory("Burn CD", "Uses .wav audio files to burn a custom CD") == 0) {
+        int returnCode = (restoreDirectory("Burn CD", "Uses .wav audio files to burn a custom CD"));
+        if (returnCode == 0) {
             showStatus("Burning CD...", 1);
             refresh();
             burnCD();
-        } else {
+        } else if (returnCode == 1) {
             showStatus("Error burning CD!",1);
+        } else {
+            showStatus("Burn cancelled.",1);
         }
     } else {
         showStatus("Burn cancelled.",1);
@@ -135,6 +142,9 @@ void menuLoop() {
                     case 3:
                         burnMenuOption();
                         break;
+                    case 4:
+                        delwin(menu);
+                        return;
                 }
 
 

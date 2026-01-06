@@ -6,7 +6,7 @@
 void initColors();
 void showStatus(const char *msg, int duration);
 void showOutput();
-void promptDirectory(const char *title, const char *description, const char *prompt);
+int promptDirectory(const char *title, const char *description, const char *prompt);
 int confirmBurn();
 
 extern char musicDir[256];

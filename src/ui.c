@@ -98,7 +98,7 @@ int getDirSuggestions(const char *baseDir, const char *prefix, char suggestions[
     return count;
 }
 
-void inputLoop(WINDOW* win, int win_w){
+int inputLoop(WINDOW* win, int win_w){
     char input[256] = "";
     char displayedInput[256] = "";
     int pos = 0;
@@ -113,7 +113,9 @@ void inputLoop(WINDOW* win, int win_w){
 
     while(1){
         ch= wgetch(win);
-
+        if (ch==27) {
+            return 1;
+        }
         if (ch=='\n') {
             if (suggestionMode == 1){
                 suggestionMode = 0;
@@ -201,13 +203,15 @@ void inputLoop(WINDOW* win, int win_w){
     }
     strncpy(musicDir, input, sizeof(musicDir)-1);
     musicDir[sizeof(musicDir)-1] = '\0';
+
+    return 0;
 }
 
 enum {
     PROMPT_X = 3
 };
 
-void promptDirectory(const char *title, const char *description, const char *prompt) {
+int promptDirectory(const char *title, const char *description, const char *prompt) {
     int win_h = 16;
     int win_w = 57;
     int win_y = (LINES - win_h) / 2;
@@ -232,12 +236,14 @@ void promptDirectory(const char *title, const char *description, const char *pro
     mvwprintw(win, 7, PROMPT_X + 1, " e.g The_Beatles/Disc01");
 
 
-    mvwprintw(win, win_h - 2, PROMPT_X, "TAB: autocomplete   ENTER: confirm");
+    mvwprintw(win, win_h - 2, PROMPT_X, "TAB: autocomplete   ENTER: confirm   ESC: main menu");
 
     wrefresh(win);
-    inputLoop(win, win_w);
+    int returnCode = inputLoop(win, win_w);
 
     delwin(win);
+
+    return returnCode;
 }
 
 // Ask for Y/N confirmation before burning
