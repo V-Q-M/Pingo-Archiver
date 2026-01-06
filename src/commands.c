@@ -29,9 +29,9 @@ void runCommand(const char *cmd) {
 }
 
 // Ask the user for a subdirectory to rip into, create it
-int backupDirectory() {
+int backupDirectory(const char *optionName) {
     promptDirectory(
-        "Backup CD",
+        optionName,
         "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 
@@ -61,25 +61,13 @@ int backupDirectory() {
     return 0;
 }
 
-// Run the CD backup command
-void backupCD() {
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd),
-             "cdrdao read-cd --read-raw --datafile %s/disc.bin %s/disc.toc && eject",
-             musicDir, musicDir);
-    runCommand(cmd);
-
-    // Make the subdirectory read-only after ripping
-    chmod(musicDir, 0555);
-}
-
 
 // Ask the user for a subdirectory to burn from
-int restoreDirectory() {
+int restoreDirectory(const char *optionName) {
     // Prompt user into a temporary buffer
     char userInput[256] = "";
     promptDirectory(
-        "Restore CD",
+        optionName,
         "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 
@@ -106,18 +94,40 @@ int restoreDirectory() {
     struct stat st;
     if (stat(musicDir, &st) != 0 || !S_ISDIR(st.st_mode)) {
         showStatus("Directory does not exist.",2);
-        getch();
         return 1;
     }
 
     return 0;
 }
 
+// Run the CD backup command
+void backupCD() {
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+             "cdrdao read-cd --read-raw --datafile %s/disc.bin %s/disc.toc && eject",
+             musicDir, musicDir);
+    runCommand(cmd);
+
+    // Make the subdirectory read-only after ripping
+    chmod(musicDir, 0555);
+}
+
+
 // Run the CD restore command
 void restoreCD() {
     char cmd[512];
-    snprintf(cmd, sizeof(cmd),
-             "cdrdao write %s/disc.toc && eject",
-             musicDir);
+    snprintf(cmd, sizeof(cmd), "cdrdao write %s/disc.toc && eject", musicDir);
+    runCommand(cmd);
+}
+
+void extractCD() {
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "cdparanoia -B %s/ && eject", musicDir);
+    runCommand(cmd);
+}
+
+void burnCD() {
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "cdrecord %s/*.wav  && eject", musicDir);
     runCommand(cmd);
 }

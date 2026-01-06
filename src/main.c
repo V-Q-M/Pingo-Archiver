@@ -10,6 +10,50 @@ int line_count = 0;
 char baseMusicDir[256] = "/home/vito/Music"; // base music directory
 char musicDir[256]; // actual directory for current operation
 
+void backupMenuOption(){
+    if (backupDirectory("Backup CD") == 0){
+        showStatus("Reading CD...",1);
+        refresh();
+        backupCD();
+    }
+}
+
+void restoreMenuOption(){
+    if (confirmBurn()) {
+        if (restoreDirectory("Backup CD") == 0) {
+            showStatus("Burning CD...", 1);
+            refresh();
+            restoreCD();
+        } else {
+            showStatus("Error burning CD!",1);
+        }
+    } else {
+        showStatus("Burn cancelled.",1);
+    }
+}
+
+void extractMenuOption(){
+    if (backupDirectory("Extract CD") == 0){
+        showStatus("Reading CD...",1);
+        refresh();
+        extractCD();
+    }
+}
+
+void burnMenuOption(){
+    if (confirmBurn()) {
+        if (restoreDirectory("Burn CD") == 0) {
+            showStatus("Burning CD...", 1);
+            refresh();
+            burnCD();
+        } else {
+            showStatus("Error burning CD!",1);
+        }
+    } else {
+        showStatus("Burn cancelled.",1);
+    }
+}
+
 // The main and start menu
 void menuLoop() {
     int choice = 0;
@@ -77,26 +121,21 @@ void menuLoop() {
 
                 line_count = 0;
 
-                if (choice == 0) {
-                    if (backupDirectory() == 0){
-                        backupDirectory();
-                        showStatus("Reading CD...",1);
-                        refresh();
-                        backupCD();
-                    }
-                } else {
-                    if (confirmBurn()) {
-                        if (restoreDirectory() == 0) {
-                            showStatus("Burning CD...", 1);
-                            refresh();
-                            restoreCD();
-                        } else {
-                            showStatus("Error burning CD!",1);
-                        }
-                    } else {
-                        showStatus("Burn cancelled.",1);
-                    }
+                switch(choice){
+                    case 0:
+                        backupMenuOption();
+                        break;
+                    case 1:
+                        restoreMenuOption();
+                        break;
+                    case 2:
+                        extractMenuOption();
+                        break;
+                    case 3:
+                        burnMenuOption();
+                        break;
                 }
+
 
                 //showOutput();
                 showStatus("Returning to main menu...",1);

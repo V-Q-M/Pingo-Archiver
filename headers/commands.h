@@ -4,10 +4,14 @@
 #define MAX_LINES 1000
 
 void runCommand(const char *cmd);
-int backupDirectory();
+int backupDirectory(const char *optionName);
+int restoreDirectory(const char *optionName);
+
 void backupCD();
-int restoreDirectory();
 void restoreCD();
+
+void extractCD();
+void burnCD();
 
 extern char musicDir[256];
 extern char baseMusicDir[256]; 
