@@ -29,7 +29,7 @@ void runCommand(const char *cmd) {
 }
 
 // Ask the user for a subdirectory to rip into, create it
-void ripDirectory() {
+int backupDirectory() {
     promptDirectory(
         "Backup CD",
         "Enter album folder name: (e.g. The_Beatles/Disc01)"
@@ -52,16 +52,17 @@ void ripDirectory() {
 
     // Create directory if it doesn't exist
     if (mkdir_recursive(musicDir, 0755) != 0) {
-    char msg[256];
-    snprintf(msg, sizeof(msg), "Error creating directory: %s", strerror(errno));
-    showStatus(msg);
-    getch();
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Error creating directory: %s", strerror(errno));
+        showStatus(msg,2);
+        return 1;
     }
 
+    return 0;
 }
 
-// Run the CD ripping command
-void ripCD() {
+// Run the CD backup command
+void backupCD() {
     char cmd[512];
     snprintf(cmd, sizeof(cmd),
              "cdrdao read-cd --read-raw --datafile %s/disc.bin %s/disc.toc && eject",
@@ -74,7 +75,7 @@ void ripCD() {
 
 
 // Ask the user for a subdirectory to burn from
-int burnDirectory() {
+int restoreDirectory() {
     // Prompt user into a temporary buffer
     char userInput[256] = "";
     promptDirectory(
@@ -104,7 +105,7 @@ int burnDirectory() {
     // Check if directory exists
     struct stat st;
     if (stat(musicDir, &st) != 0 || !S_ISDIR(st.st_mode)) {
-        showStatus("Directory does not exist.");
+        showStatus("Directory does not exist.",2);
         getch();
         return 1;
     }
@@ -112,8 +113,8 @@ int burnDirectory() {
     return 0;
 }
 
-// Run the CD burning command
-void burnCD() {
+// Run the CD restore command
+void restoreCD() {
     char cmd[512];
     snprintf(cmd, sizeof(cmd),
              "cdrdao write %s/disc.toc && eject",

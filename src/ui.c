@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <stdio.h>
+#include <unistd.h>
 
 
 // Initialize colors
@@ -14,7 +15,7 @@ void initColors() {
     init_pair(2, COLOR_WHITE, COLOR_BLACK); // Normal text
 }
 
-void showStatus(const char *msg) {
+void showStatus(const char *msg, int duration) {
     int win_h = 5;
     int win_w = COLS - 10;
     int win_y = (LINES - win_h) / 2;
@@ -31,6 +32,8 @@ void showStatus(const char *msg) {
 
     wrefresh(win);
     delwin(win);
+
+    sleep(duration);
 }
 
 void showOutput() {

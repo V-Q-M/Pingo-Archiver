@@ -15,8 +15,8 @@ void menuLoop() {
     int choice = 0;
     int ch;
 
-    const char *options[] = { "Backup CD", "Restore CD" };
-    const int optionCount = 2;
+    const char *options[] = { "Backup CD", "Restore CD" , "Extract CD", "Burn CD"};
+    const int optionCount = 4;
 
     int win_h = 13;
     int win_w = 42;
@@ -78,27 +78,29 @@ void menuLoop() {
                 line_count = 0;
 
                 if (choice == 0) {
-                    ripDirectory();
-                    showStatus("Reading CD...");
-                    refresh();
-                    ripCD();
+                    if (backupDirectory() == 0){
+                        backupDirectory();
+                        showStatus("Reading CD...",1);
+                        refresh();
+                        backupCD();
+                    }
                 } else {
                     if (confirmBurn()) {
-                        if (burnDirectory() == 0) {
-                            showStatus("Burning CD...");
+                        if (restoreDirectory() == 0) {
+                            showStatus("Burning CD...", 1);
                             refresh();
-                            burnCD();
+                            restoreCD();
                         } else {
-                            showStatus("Error burning CD");
+                            showStatus("Error burning CD!",1);
                         }
                     } else {
-                        mvprintw(2, 5, "Burn cancelled.");
+                        showStatus("Burn cancelled.",1);
                     }
                 }
 
                 //showOutput();
-                showStatus("Press any key to return to the menu...");
-                getch();
+                showStatus("Returning to main menu...",1);
+                //getch();
 
                 clear();
                 refresh();

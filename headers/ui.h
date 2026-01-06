@@ -4,7 +4,7 @@
 #define MAX_LINES 1000
 
 void initColors();
-void showStatus(const char *msg);
+void showStatus(const char *msg, int duration);
 void showOutput();
 void promptDirectory(const char *title, const char *prompt);
 int confirmBurn();
