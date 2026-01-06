@@ -130,7 +130,7 @@ void inputLoop(WINDOW* win, int win_w){
                 input[pos] = '\0';
             }
             // redraw inputline
-            mvwprintw(win, 5, 2, "> %-*s", win_w-4, input); 
+            mvwprintw(win, 5, 2, "> %-*s", win_w/2, input); 
         } else if (ch == '\t' || ch == KEY_BTAB) {
             if (sugCount > 0) {
                 if (suggestionMode == 0) {
@@ -152,7 +152,7 @@ void inputLoop(WINDOW* win, int win_w){
                 displayedInput[sizeof(displayedInput) - 1] = '\0';
 
                 // redraw input line
-                mvwprintw(win, 5, 2, "> %-*s", win_w - 4, displayedInput);
+                mvwprintw(win, 5, 2, "> %-*s", win_w/2, displayedInput);
             }
         } else if (isprint(ch) && pos < sizeof(input)-1){
             if (suggestionMode == 1){
@@ -165,7 +165,7 @@ void inputLoop(WINDOW* win, int win_w){
             input[pos] = '\0'; // Adjust for null terminator
 
             // redraw inputline
-            mvwprintw(win, 5, 2, "> %-*s", win_w-4, input); 
+            mvwprintw(win, 5, 2, "> %-*s", win_w/2, input); 
         }
 
         // show suggestions if input >= 3

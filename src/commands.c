@@ -31,7 +31,7 @@ void runCommand(const char *cmd) {
 // Ask the user for a subdirectory to rip into, create it
 void ripDirectory() {
     promptDirectory(
-        "Rip CD",
+        "Backup CD",
         "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 
@@ -78,7 +78,7 @@ int burnDirectory() {
     // Prompt user into a temporary buffer
     char userInput[256] = "";
     promptDirectory(
-        "Burn CD",
+        "Restore CD",
         "Enter album folder name: (e.g. The_Beatles/Disc01)"
     );
 

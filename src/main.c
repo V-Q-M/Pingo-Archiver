@@ -15,7 +15,7 @@ void menuLoop() {
     int choice = 0;
     int ch;
 
-    const char *options[] = { "Rip CD", "Burn CD" };
+    const char *options[] = { "Backup CD", "Restore CD" };
     const int optionCount = 2;
 
     int win_h = 13;
@@ -79,18 +79,16 @@ void menuLoop() {
 
                 if (choice == 0) {
                     ripDirectory();
-                    showStatus("Ripping CD...");
+                    showStatus("Reading CD...");
                     refresh();
                     ripCD();
                 } else {
                     if (confirmBurn()) {
                         if (burnDirectory() == 0) {
-                            //mvprintw(2, 5, "Burning CD from %s...", musicDir);
                             showStatus("Burning CD...");
                             refresh();
                             burnCD();
                         } else {
-                            //mvprintw(2, 5, "Error burning CD...");
                             showStatus("Error burning CD");
                         }
                     } else {
