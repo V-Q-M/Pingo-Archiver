@@ -131,14 +131,14 @@ void inputLoop(WINDOW* win, int win_w){
             }
             // redraw inputline
             mvwprintw(win, 5, 2, "> %-*s", win_w/2, input); 
-        } else if (ch == '\t' || ch == KEY_BTAB) {
+        } else if (ch == '\t' || ch == KEY_BTAB || ch == KEY_UP || ch == KEY_DOWN) {
             if (sugCount > 0) {
                 if (suggestionMode == 0) {
                     // First Tab press 
-                    currentSuggestion = (ch == KEY_BTAB) ? sugCount - 1 : 0;
+                    currentSuggestion = (ch == KEY_BTAB || ch == KEY_UP) ? sugCount - 1 : 0;
                 } else {
                     // Move forward or backward through suggestions
-                    if (ch == KEY_BTAB) {
+                    if (ch == KEY_BTAB || ch == KEY_UP) {
                         currentSuggestion = (currentSuggestion - 1 + sugCount) % sugCount;
                     } else {
                         currentSuggestion = (currentSuggestion + 1) % sugCount;
