@@ -84,7 +84,7 @@ int getDirSuggestions(const char *baseDir, const char *prefix, char suggestions[
             continue;
 
         // Match prefix
-        if (strncmp(entry->d_name, prefix, preLen) == 0) {
+        if (strncmp(entry->d_name, prefix, preLen) == 0 && strcmp(entry->d_name, prefix) != 0) {
             strncpy(suggestions[count], entry->d_name, 255);
             suggestions[count][255] = '\0';
             count++;
@@ -172,7 +172,15 @@ void inputLoop(WINDOW* win, int win_w){
         if (pos > 0) {
             sugCount = getDirSuggestions(baseMusicDir, input, suggestions);
             for (int i = 0; i < MAX_SUGGESTIONS; i++) {
-                mvwprintw(win, 6 + i, 4, "%-50s", i < sugCount ? suggestions[i] : "");
+                if (suggestionMode && i == currentSuggestion){
+                    wattron(win, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
+                    mvwprintw(win, 6 + i, 4, "%-50s", i < sugCount ? suggestions[i] : "");
+                    wattroff(win, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
+                } else {
+                    wattron(win, COLOR_PAIR(2));
+                    mvwprintw(win, 6 + i, 4, "%-50s", i < sugCount ? suggestions[i] : "");
+                    wattroff(win, COLOR_PAIR(2));
+                }
             }
         } else {
             // clear suggestion lines
@@ -187,7 +195,7 @@ void inputLoop(WINDOW* win, int win_w){
 }
 
 void promptDirectory(const char *title, const char *prompt) {
-    int win_h = 9;
+    int win_h = 12;
     int win_w = 60;
     int win_y = (LINES - win_h) / 2;
     int win_x = (COLS - win_w) / 2;
