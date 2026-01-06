@@ -4,8 +4,8 @@
 #define MAX_LINES 1000
 
 void runCommand(const char *cmd);
-int backupDirectory(const char *optionName);
-int restoreDirectory(const char *optionName);
+int backupDirectory(const char *optionName, const char *optionDescription);
+int restoreDirectory(const char *optionName, const char *optionDescription);
 
 void backupCD();
 void restoreCD();

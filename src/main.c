@@ -11,7 +11,7 @@ char baseMusicDir[256] = "/home/vito/Music"; // base music directory
 char musicDir[256]; // actual directory for current operation
 
 void backupMenuOption(){
-    if (backupDirectory("Backup CD") == 0){
+    if (backupDirectory("Backup CD", "Copies the unchanged content for future restoration") == 0){
         showStatus("Reading CD...",1);
         refresh();
         backupCD();
@@ -20,7 +20,7 @@ void backupMenuOption(){
 
 void restoreMenuOption(){
     if (confirmBurn()) {
-        if (restoreDirectory("Backup CD") == 0) {
+        if (restoreDirectory("Restore CD", "Uses a saved backup to recreate the cd") == 0) {
             showStatus("Burning CD...", 1);
             refresh();
             restoreCD();
@@ -33,7 +33,7 @@ void restoreMenuOption(){
 }
 
 void extractMenuOption(){
-    if (backupDirectory("Extract CD") == 0){
+    if (backupDirectory("Extract CD", "Extracts content in a widely used format like .wav") == 0){
         showStatus("Reading CD...",1);
         refresh();
         extractCD();
@@ -42,7 +42,7 @@ void extractMenuOption(){
 
 void burnMenuOption(){
     if (confirmBurn()) {
-        if (restoreDirectory("Burn CD") == 0) {
+        if (restoreDirectory("Burn CD", "Uses .wav audio files to burn a custom CD") == 0) {
             showStatus("Burning CD...", 1);
             refresh();
             burnCD();
@@ -59,15 +59,16 @@ void menuLoop() {
     int choice = 0;
     int ch;
 
-    const char *options[] = { "Backup CD", "Restore CD" , "Extract CD", "Burn CD"};
-    const int optionCount = 4;
+    const char *options[] = { "Backup CD", "Restore CD" , "Extract CD", "Burn CD", "Quit"};
+    const int optionCount = 5;
 
-    int win_h = 13;
-    int win_w = 42;
+    int win_h = 16;
+    int win_w = 48;
     int win_y = (LINES - win_h) / 2;
     int win_x = (COLS - win_w) / 2;
 
     WINDOW *menu = newwin(win_h, win_w, win_y, win_x);
+    int menu_x = 3;
     keypad(menu, TRUE);
 
     while (1) {
@@ -76,27 +77,27 @@ void menuLoop() {
 
         /* Title */
         wattron(menu, A_BOLD);
-        mvwprintw(menu, 1, (win_w - 15) / 2, "PINGO ARCHIVER");
+        mvwprintw(menu, 1, (win_w - 13) / 2, "PINGO ARCHIVER");
         wattroff(menu, A_BOLD);
 
         /* Separator */
         mvwhline(menu, 2, 1, ACS_HLINE, win_w - 2);
 
         /* Help text */
-        mvwprintw(menu, 3, 2, "J-K Navigate   ENTER Select   Q Quit");
+        mvwprintw(menu, 3, 2, "J-K: Navigate   ENTER: Select   D: DVD-Mode");
 
         /* Menu options */
         for (int i = 0; i < optionCount; i++) {
-            int y = 6 + i;
+            int menu_y = 5 + 2*i;
 
             if (i == choice) {
                 wattron(menu, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
-                mvwprintw(menu, y, 4, "%-*s", win_w - 8, options[i]);
+                mvwprintw(menu, menu_y, menu_x, "%-*s", win_w - 8, options[i]);
                 wattroff(menu, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
             } else {
-                wattron(menu, COLOR_PAIR(2));
-                mvwprintw(menu, y, 4, "%-*s", win_w - 8, options[i]);
-                wattroff(menu, COLOR_PAIR(2));
+                wattron(menu, COLOR_PAIR(2) | A_BOLD);
+                mvwprintw(menu, menu_y, menu_x, "%-*s", win_w - 8, options[i]);
+                wattroff(menu, COLOR_PAIR(2) | A_BOLD);
             }
         }
 

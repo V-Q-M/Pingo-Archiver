@@ -29,10 +29,11 @@ void runCommand(const char *cmd) {
 }
 
 // Ask the user for a subdirectory to rip into, create it
-int backupDirectory(const char *optionName) {
+int backupDirectory(const char *optionName, const char *optionDescription) {
     promptDirectory(
         optionName,
-        "Enter album folder name: (e.g. The_Beatles/Disc01)"
+        optionDescription, 
+        "Enter album folder name: "
     );
 
     char finalPath[256];
@@ -63,12 +64,13 @@ int backupDirectory(const char *optionName) {
 
 
 // Ask the user for a subdirectory to burn from
-int restoreDirectory(const char *optionName) {
+int restoreDirectory(const char *optionName, const char *optionDescription) {
     // Prompt user into a temporary buffer
     char userInput[256] = "";
     promptDirectory(
         optionName,
-        "Enter album folder name: (e.g. The_Beatles/Disc01)"
+        optionDescription,
+        "Enter album folder name: "
     );
 
     // Copy & clean input from musicDir (where promptDirectory wrote)

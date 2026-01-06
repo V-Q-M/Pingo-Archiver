@@ -133,9 +133,11 @@ void inputLoop(WINDOW* win, int win_w){
                 input[pos] = '\0';
             }
             // redraw inputline
-            mvwprintw(win, 5, 2, "> %-*s", win_w/2, input); 
+            wattron(win, A_BOLD);
+            mvwprintw(win, 7, 3, "> %-*s", win_w/2, input); 
+            wattroff(win, A_BOLD);
         } else if (ch == '\t' || ch == KEY_BTAB || ch == KEY_UP || ch == KEY_DOWN) {
-            if (sugCount > 0) {
+            if (sugCount > 0 && pos > 0) {
                 if (suggestionMode == 0) {
                     // First Tab press 
                     currentSuggestion = (ch == KEY_BTAB || ch == KEY_UP) ? sugCount - 1 : 0;
@@ -155,7 +157,9 @@ void inputLoop(WINDOW* win, int win_w){
                 displayedInput[sizeof(displayedInput) - 1] = '\0';
 
                 // redraw input line
-                mvwprintw(win, 5, 2, "> %-*s", win_w/2, displayedInput);
+                wattron(win, A_BOLD);
+                mvwprintw(win, 7, 3, "> %-*s", win_w/2, displayedInput);
+                wattroff(win, A_BOLD);
             }
         } else if (isprint(ch) && pos < sizeof(input)-1){
             if (suggestionMode == 1){
@@ -168,7 +172,9 @@ void inputLoop(WINDOW* win, int win_w){
             input[pos] = '\0'; // Adjust for null terminator
 
             // redraw inputline
-            mvwprintw(win, 5, 2, "> %-*s", win_w/2, input); 
+            wattron(win, A_BOLD);
+            mvwprintw(win, 7, 3, "> %-*s", win_w/2, input); 
+            wattroff(win, A_BOLD);
         }
 
         // show suggestions if input >= 3
@@ -177,18 +183,18 @@ void inputLoop(WINDOW* win, int win_w){
             for (int i = 0; i < MAX_SUGGESTIONS; i++) {
                 if (suggestionMode && i == currentSuggestion){
                     wattron(win, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
-                    mvwprintw(win, 6 + i, 4, "%-50s", i < sugCount ? suggestions[i] : "");
+                    mvwprintw(win, 8 + i, 5, "%-50s", i < sugCount ? suggestions[i] : "");
                     wattroff(win, COLOR_PAIR(1) | A_REVERSE | A_BOLD);
                 } else {
                     wattron(win, COLOR_PAIR(2));
-                    mvwprintw(win, 6 + i, 4, "%-50s", i < sugCount ? suggestions[i] : "");
+                    mvwprintw(win, 8 + i, 5, "%-50s", i < sugCount ? suggestions[i] : "");
                     wattroff(win, COLOR_PAIR(2));
                 }
             }
         } else {
             // clear suggestion lines
             for (int i = 0; i < MAX_SUGGESTIONS; i++)
-                mvwprintw(win, 6 + i, 4, "%-50s", "");
+                mvwprintw(win, 8 + i, 5, "%-50s", "");
         } 
 
         wrefresh(win);
@@ -197,9 +203,13 @@ void inputLoop(WINDOW* win, int win_w){
     musicDir[sizeof(musicDir)-1] = '\0';
 }
 
-void promptDirectory(const char *title, const char *prompt) {
-    int win_h = 12;
-    int win_w = 60;
+enum {
+    PROMPT_X = 3
+};
+
+void promptDirectory(const char *title, const char *description, const char *prompt) {
+    int win_h = 16;
+    int win_w = 57;
     int win_y = (LINES - win_h) / 2;
     int win_x = (COLS - win_w) / 2;
 
@@ -207,28 +217,26 @@ void promptDirectory(const char *title, const char *prompt) {
     box(win, 0, 0);
     keypad(win, TRUE);
 
-    //echo();
-    //curs_set(1);
-
     wattron(win, A_BOLD);
     mvwprintw(win, 1, (win_w - strlen(title)) / 2, "%s", title);
     wattroff(win, A_BOLD);
 
     mvwhline(win, 2, 1, ACS_HLINE, win_w - 2);
-    mvwprintw(win, 3, 2, "%s", prompt);
-    mvwprintw(win, 5, 2, "> ");
+    mvwprintw(win, 3, PROMPT_X, "%s", description);
+
+    wattron(win, A_BOLD);
+    mvwprintw(win, 5, PROMPT_X, "%s", prompt);
+    mvwprintw(win, 7, PROMPT_X, ">");
+    wattroff(win, A_BOLD);
+
+    mvwprintw(win, 7, PROMPT_X + 1, " e.g The_Beatles/Disc01");
+
+
+    mvwprintw(win, win_h - 2, PROMPT_X, "TAB: autocomplete   ENTER: confirm");
 
     wrefresh(win);
-    // detect keypresses and "type" them like echo
-    // after typing 3 letters get recommendations from the baseMusicDir
-    // display 4 or 5 of these recommendations below
-
-
-//    wgetnstr(win, musicDir, 255);
     inputLoop(win, win_w);
 
-    //noecho();
-    //curs_set(0);
     delwin(win);
 }
 
